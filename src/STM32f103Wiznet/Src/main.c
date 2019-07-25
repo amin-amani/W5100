@@ -26,7 +26,7 @@
 #include "stm32f1xx_hal_spi.h"
 #include "Ethernet/wizchip_conf.h"
 #include "Ethernet/socket.h"
-#include "Ethernet/W5100S/w5100s.h"
+#include "Ethernet/W5100/w5100.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -160,6 +160,48 @@ int _write(int file, char *ptr, int len)
 	return  len;
 
 }
+void SendTCPMessage()
+{
+	 uint8_t retVal, sockStatus;
+
+	  /* While socket is in LISTEN mode we wait for a remote connection */
+			  //while(sockStatus = getSn_SR(0) == SOCK_LISTEN)
+				//  HAL_Delay(100);
+			  /* OK. Got a remote peer. Let's send a message to it */
+	 while( getSn_SR(0) == SOCK_LISTEN);
+	 while(getSn_SR(0) == SOCK_ESTABLISHED) {
+			//int32_t recv(uint8_t sn, uint8_t * buf, uint16_t len)
+		 recv(0,ethBuf0,sizeof(ethBuf0));
+		 printf(ethBuf0);
+				  /* If connection is ESTABLISHED with remote peer */
+				  //if(sockStatus = getSn_SR(0) == SOCK_ESTABLISHED) {
+					  uint8_t remoteIP[4];
+					  uint16_t remotePort;
+					  /* Retrieving remote peer IP and port number */
+					  getsockopt(0, SO_DESTIP, remoteIP);
+					  getsockopt(0, SO_DESTPORT, (uint8_t*)&remotePort);
+					  printf("connection ok from:%d.%d.%d.%d:%d\r\n" ,remoteIP[0],remoteIP[1],remoteIP[2],remoteIP[3], remotePort);
+
+					  /* Let's send a welcome message and closing socket */
+					  if(retVal = send(0, "*****welcome*****\r\n", strlen("*****welcome*****\r\n")) == (int16_t)strlen("*****welcome*****\r\n"))
+					  {
+						  //printf("welcome sent\r\n");
+					  }
+					  else { /* Ops: something went wrong during data transfer */
+
+						  printf("something went wrong during data transfer %d\r\n", retVal);
+						  break;
+					  }
+					//
+				  }
+//				  else { /* Something went wrong with remote peer, maybe the connection was closed unexpectedly */
+//					  printf("Something went wrong with remote peer %d\r\n", sockStatus);
+//
+//					  break;
+//				  }
+			 // }//end while
+
+}
 void TCPLoop()
 {
 	 uint8_t retVal, sockStatus;
@@ -169,38 +211,11 @@ void TCPLoop()
 	  if((retVal = socket(0, Sn_MR_TCP, 5000, 0)) == 0) {
 		  /* Put socket in LISTEN mode. This means we are creating a TCP server */
 		  if((retVal = listen(0)) == SOCK_OK) {
-			  /* While socket is in LISTEN mode we wait for a remote connection */
-			  while(sockStatus = getSn_SR(0) == SOCK_LISTEN)
-				  HAL_Delay(100);
-			  /* OK. Got a remote peer. Let's send a message to it */
-			  while(1) {
-				  /* If connection is ESTABLISHED with remote peer */
-				  if(sockStatus = getSn_SR(0) == SOCK_ESTABLISHED) {
-					  uint8_t remoteIP[4];
-					  uint16_t remotePort;
-					  /* Retrieving remote peer IP and port number */
-					  getsockopt(0, SO_DESTIP, remoteIP);
-					  getsockopt(0, SO_DESTPORT, (uint8_t*)&remotePort);
-					  printf("connection ok from:%d.%d.%d.%d:%d" ,remoteIP[0],remoteIP[1],remoteIP[2],remoteIP[3], remotePort);
+SendTCPMessage();
 
-					  /* Let's send a welcome message and closing socket */
-					  if(retVal = send(0, "*****welcome*****", strlen("*****welcome*****")) == (int16_t)strlen("*****welcome*****"))
-					  printf("welcome sent\r\n");
-					  else { /* Ops: something went wrong during data transfer */
-
-						  printf("something went wrong during data transfer %d\r\n", retVal);
-					  }
-					  break;
-				  }
-				  else { /* Something went wrong with remote peer, maybe the connection was closed unexpectedly */
-					  printf("Something went wrong with remote peer %d\r\n", sockStatus);
-
-					  break;
-				  }
-			  }//end while
-
-		  } else /* Ops: socket not in LISTEN mode. Something went wrong */
-			  printf("listen\r\n");
+		  }
+		  else /* Ops: socket not in LISTEN mode. Something went wrong */
+		 printf("listen\r\n");
 	  } else { /* Can't open the socket. This means something is wrong with W5100 configuration: maybe SPI issue? */
 		  printf("socket open error: %d\r\n", retVal);
 
